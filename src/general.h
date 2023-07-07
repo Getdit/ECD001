@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "ArduinoJson.h"
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <WiFiClient.h>
@@ -10,17 +11,14 @@
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 #include <Adafruit_Sensor.h>
-#include <DHT.h>
+
+
+#define ARDUINOJSON_DECODE_UNICODE 0
+#include <ArduinoJson.h>
+
 
 #define LED               2
-#define DHTPIN            2                   //Definir pinos que será conectado o dht -- ??
-#define DHTTYPE           DHT11
 
-// Instancia DHT
-DHT dht(DHTPIN, DHTTYPE);
-
-// Simula sensor magnético
-bool sensorMag = false;
 
 // Instanciando um Servidor WEB assíncrono na porta 80
 AsyncWebServer server(80);
@@ -63,6 +61,7 @@ EthernetClient ethClient;
 PubSubClient client(wifi_client);
 String str_topic_in = "sensor/"+WiFi.macAddress()+"/in";
 String str_topic_out = "sensor/"+WiFi.macAddress()+"/out";
+StaticJsonDocument<300> doc;
 
 const char* topic_in = str_topic_in.c_str();
 const char* topic_out = str_topic_out.c_str();
@@ -195,7 +194,7 @@ void reconnect() {
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
       // Subscribe
-      client.subscribe("esp32/output");
+      client.subscribe(topic_in);
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -272,16 +271,6 @@ void server_config(){
   server.begin();
 }
 
-void on_message(char* topic, byte* payload, unsigned int length){
-  Serial.println(topic);
-  String message = (char*)payload;
-  Serial.println(message);
-}
-
-void on_stream(char* topic, byte* payload, unsigned int length){
-  Serial.println("MQTT STREAM");
-}
-
 void updateota(String url){
   //Update OTA
   httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
@@ -299,3 +288,23 @@ void updateota(String url){
       break;
   }
 }
+
+void on_message(char* topic, byte* payload, unsigned int length){
+  Serial.println(topic);
+  String message;// = (char*)payload;	
+  
+  for (int i=0;i<length;i++) {
+    message += (char)payload[i];
+  }
+
+  deserializeJson(doc, message);
+  String url = doc["update_url"].as<const char*>();
+
+  Serial.println("Received update command: ");
+  Serial.println(url);
+  Serial.println("Trying...");
+
+  updateota(url);
+}
+
+

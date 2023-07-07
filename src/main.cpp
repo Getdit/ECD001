@@ -1,9 +1,21 @@
-#define BROKER_ADDRESS    "4.tcp.ngrok.io" // "3.133.207.110"
-#define BROKER_PORT       15967
+#define BROKER_ADDRESS    "2.tcp.ngrok.io" // "3.133.207.110"
+#define BROKER_PORT       18906
 #define BROKER_USE_SECURE false
 #define FW_VERSION        1
 
-//#include "general.h"
+// ------------- Início: Iclusões, Definições e instâncias ----------------
+#include <DHT.h>
+
+#define DHTPIN            2                   //Definir pinos que será conectado o dht -- ??
+#define DHTTYPE           DHT11
+
+// Instancia DHT
+DHT dht(DHTPIN, DHTTYPE);
+
+// Simula sensor magnético
+bool sensorMag = false;
+//-------------- FIM ---------------
+
 #include "aquisition.h"
 
 void setup() {
@@ -20,6 +32,9 @@ void setup() {
 
     client.setServer(BROKER_ADDRESS, BROKER_PORT);
     client.setCallback(on_message);
+    if (client.connect("aquisiton")){
+      client.subscribe(topic_in);
+    }
     wifi_success = true;
   } 
   else {
